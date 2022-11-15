@@ -1,10 +1,12 @@
 use std::net::TcpListener;
 
-use lib::{configuration::GlobalConfig, server::run};
+use lib::{configuration::GlobalConfig, server::run, telemetry::init_telemetry};
 use thiserror::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    // ini trace layer
+    init_telemetry();
     // build config
     let env = std::env::var("ENVIRONMENT").ok();
     let config_path = std::env::current_dir()?.join("config");
@@ -13,6 +15,7 @@ async fn main() -> Result<(), Error> {
     let listener = TcpListener::bind(config.app_settings.address())?;
 
     // run server
+    tracing::debug!("listening on {}", config.app_settings.address());
     Ok(run(listener).await?)
 }
 
