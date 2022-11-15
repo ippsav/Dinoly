@@ -1,20 +1,22 @@
-use axum::{routing::get, Json, Router};
-use serde_json::{json, Value};
+use std::net::TcpListener;
 
-async fn health_check_handler() -> Json<Value> {
-    Json(json!({
-        "status": "ok"
-    }))
-}
+use lib::server::run;
+use thiserror::Error;
 
 #[tokio::main]
-async fn main() {
-    // Create axum router
-    let app = Router::new().route("/health_check", get(health_check_handler));
+async fn main() -> Result<(), Error> {
+    // make listener
+    let listener = TcpListener::bind("0.0.0.0:3000")?;
 
-    // Start server
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    // run server
+
+    Ok(run(listener).await?)
+}
+
+#[derive(Error, Debug)]
+enum Error {
+    #[error("io error")]
+    IO(#[from] std::io::Error),
+    #[error("hyper server error")]
+    Hyper(#[from] hyper::Error),
 }
