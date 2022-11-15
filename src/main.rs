@@ -6,8 +6,9 @@ use thiserror::Error;
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     // build config
-    let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "developement".into());
-    let config = GlobalConfig::build(&env)?;
+    let env = std::env::var("ENVIRONMENT").ok();
+    let config_path = std::env::current_dir()?.join("config");
+    let config = GlobalConfig::build(env, config_path)?;
     // make listener
     let listener = TcpListener::bind(config.app_settings.address())?;
 

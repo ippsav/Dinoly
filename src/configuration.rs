@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use config::{Config, ConfigError, File, FileFormat};
 use serde::Deserialize;
 
@@ -25,9 +27,15 @@ pub enum Environment {
     Production,
 }
 
-impl From<&str> for Environment {
-    fn from(value: &str) -> Self {
-        match value {
+impl Default for Environment {
+    fn default() -> Self {
+        Self::Development
+    }
+}
+
+impl From<String> for Environment {
+    fn from(value: String) -> Self {
+        match value.to_lowercase().as_str() {
             "test" => Self::Test,
             "production" => Self::Production,
             _ => Self::Development,
@@ -36,15 +44,22 @@ impl From<&str> for Environment {
 }
 
 impl GlobalConfig {
-    pub fn build(env: &str) -> Result<GlobalConfig, ConfigError> {
-        let source_file = match env.into() {
-            Environment::Test => "config/config.test.yaml",
-            Environment::Development => "config/config.dev.yaml",
-            Environment::Production => "config/config.prod.yaml",
+    pub fn build(env: Option<String>, path: PathBuf) -> Result<GlobalConfig, ConfigError> {
+        let env = if let Some(value) = env {
+            value.into()
+        } else {
+            Environment::default()
         };
+        let file_name = match env {
+            Environment::Test => "config.test.yaml",
+            Environment::Development => "config.dev.yaml",
+            Environment::Production => "config.prod.yaml",
+        };
+        let path = path.join(file_name);
+        let source = path.to_str().expect("could not get path to config file");
 
         Config::builder()
-            .add_source(File::new(source_file, FileFormat::Yaml))
+            .add_source(File::new(source, FileFormat::Yaml))
             .build()?
             .try_deserialize::<GlobalConfig>()
     }
