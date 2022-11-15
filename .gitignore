@@ -13,3 +13,7 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+config/config.dev.yaml
+config/config.prod.yaml
+config/config.test.yaml
