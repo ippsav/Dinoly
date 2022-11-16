@@ -16,4 +16,3 @@ Cargo.lock
 
 config/config.dev.yaml
 config/config.prod.yaml
-config/config.test.yaml
