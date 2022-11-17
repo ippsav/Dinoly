@@ -4,12 +4,12 @@ use config::{Config, ConfigError, File, FileFormat};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-pub struct AppSettings {
+pub struct Application {
     pub address: String,
     pub port: u16,
 }
 
-impl AppSettings {
+impl Application {
     pub fn address(&self) -> String {
         format!("{}:{}", &self.address, self.port)
     }
@@ -17,7 +17,7 @@ impl AppSettings {
 
 #[derive(Debug, Deserialize)]
 pub struct GlobalConfig {
-    pub app_settings: AppSettings,
+    pub application: Application,
 }
 
 #[derive(Debug, PartialEq, Eq)]

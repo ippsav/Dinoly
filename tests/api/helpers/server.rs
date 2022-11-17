@@ -22,7 +22,7 @@ impl TestApp {
 
     pub async fn spawn_server(&mut self) {
         // Create tcp listener
-        let listener = TcpListener::bind(format!("{}:0", &self.config.app_settings.address))
+        let listener = TcpListener::bind(format!("{}:0", &self.config.application.address))
             .expect("couldn't create tcp listener");
         let local_addr = listener
             .local_addr()
@@ -38,12 +38,12 @@ impl TestApp {
                 .unwrap()
         });
 
-        self.config.app_settings.port = local_addr.port();
+        self.config.application.port = local_addr.port();
     }
 
     pub fn get_http_uri(&self, path: Option<&'static str>) -> String {
         let path = path.unwrap_or("");
 
-        format!("http://{}{}", &self.config.app_settings.address(), path)
+        format!("http://{}{}", &self.config.application.address(), path)
     }
 }

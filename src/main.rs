@@ -12,10 +12,10 @@ async fn main() -> Result<(), Error> {
     let config_path = std::env::current_dir()?.join("config");
     let config = GlobalConfig::build(env, config_path)?;
     // make listener
-    let listener = TcpListener::bind(config.app_settings.address())?;
+    let listener = TcpListener::bind(config.application.address())?;
 
     // run server
-    tracing::debug!("listening on {}", config.app_settings.address());
+    tracing::debug!("listening on {}", config.application.address());
     Ok(run(listener).await?)
 }
 
