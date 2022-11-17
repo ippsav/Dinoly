@@ -14,5 +14,3 @@ Cargo.lock
 
 /target
 
-config/config.dev.yaml
-config/config.prod.yaml
