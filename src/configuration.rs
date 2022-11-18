@@ -52,6 +52,9 @@ impl GlobalConfig {
         } else {
             Env::default()
         };
+        if env == Env::Production {
+            Self::set_port_for_prod();
+        }
         let file_name = match env {
             Env::Test => "config.test.yaml",
             Env::Development => "config.dev.yaml",
@@ -69,5 +72,9 @@ impl GlobalConfig {
             )
             .build()?
             .try_deserialize::<GlobalConfig>()
+    }
+    fn set_port_for_prod() {
+        let port = std::env::var("PORT").unwrap();
+        std::env::set_var("APP_APPLICATION__PORT", port);
     }
 }
