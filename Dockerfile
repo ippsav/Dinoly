@@ -14,7 +14,7 @@ RUN cargo build --release
 # Docker image for running the server
 FROM debian:bullseye-slim as runtime
 
-ARG APP_APPLICATION__PORT
+ARG PORT
 
 # Set working directory to app
 WORKDIR /app
@@ -31,6 +31,7 @@ RUN apt-get update -y\
     && rm -rf /var/lib/apt/lists/*
 
 # Setting environment variable to production mode
+ENV APP_APPLICATION__PORT ${PORT}
 ENV ENVIRONMENT production
 ENV RUST_LOG debug
 
