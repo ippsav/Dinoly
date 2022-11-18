@@ -7,6 +7,8 @@ use thiserror::Error;
 async fn main() -> Result<(), Error> {
     let port = std::env::var("PORT").unwrap();
     dbg!(port);
+    let exposed_port = std::env::var("APP_APPLICATION__PORT").unwrap();
+    dbg!(exposed_port);
     // ini trace layer
     init_telemetry();
     // build config
