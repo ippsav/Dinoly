@@ -31,7 +31,7 @@ RUN apt-get update -y\
     && rm -rf /var/lib/apt/lists/*
 
 # Setting environment variable to production mode
-ENV APP_APPLICATION__PORT ${PORT}
+RUN export APP_APPLICATION__PORT=$PORT
 ENV ENVIRONMENT production
 ENV RUST_LOG debug
 
