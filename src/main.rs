@@ -5,6 +5,8 @@ use thiserror::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let port = std::env::var("PORT").unwrap();
+    dbg!(port);
     // ini trace layer
     init_telemetry();
     // build config
