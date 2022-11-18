@@ -1,11 +1,13 @@
+use serde_aux::field_attributes::deserialize_number_from_string;
 use std::path::PathBuf;
 
-use config::{Config, ConfigError, File, FileFormat};
+use config::{Config, ConfigError, Environment, File, FileFormat};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Application {
     pub address: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
 }
 
@@ -21,19 +23,19 @@ pub struct GlobalConfig {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Environment {
+pub enum Env {
     Test,
     Development,
     Production,
 }
 
-impl Default for Environment {
+impl Default for Env {
     fn default() -> Self {
         Self::Development
     }
 }
 
-impl From<String> for Environment {
+impl From<String> for Env {
     fn from(value: String) -> Self {
         match value.to_lowercase().as_str() {
             "test" => Self::Test,
@@ -48,18 +50,23 @@ impl GlobalConfig {
         let env = if let Some(value) = env {
             value.into()
         } else {
-            Environment::default()
+            Env::default()
         };
         let file_name = match env {
-            Environment::Test => "config.test.yaml",
-            Environment::Development => "config.dev.yaml",
-            Environment::Production => "config.prod.yaml",
+            Env::Test => "config.test.yaml",
+            Env::Development => "config.dev.yaml",
+            Env::Production => "config.prod.yaml",
         };
         let path = path.join(file_name);
         let source = path.to_str().expect("could not get path to config file");
 
         Config::builder()
             .add_source(File::new(source, FileFormat::Yaml))
+            .add_source(
+                Environment::with_prefix("APP")
+                    .prefix_separator("_")
+                    .separator("__"),
+            )
             .build()?
             .try_deserialize::<GlobalConfig>()
     }
