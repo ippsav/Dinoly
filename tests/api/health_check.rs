@@ -6,7 +6,7 @@ use crate::helpers::{server::TestApp, ParseJson};
 #[tokio::test]
 async fn health_route_status() {
     // Run server
-    let mut app = TestApp::new();
+    let mut app = TestApp::new().await;
     app.spawn_server().await;
 
     // Create client
