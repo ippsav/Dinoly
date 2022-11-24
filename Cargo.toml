@@ -5,6 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = [".", "migration"]
+
 [lib]
 name = "lib"
 path = "src/lib.rs"
@@ -35,3 +38,4 @@ validator = { version = "0.16.0", features = ["derive"] }
 [dev-dependencies]
 tower = { version = "0.4.13", features = ["util"] }
 hyper = { version = "0.14.23", features = ["client"] }
+migration = { path = "migration" }

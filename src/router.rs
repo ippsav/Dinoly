@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use crate::{
-    configuration::GlobalConfig,
-    handler::{login_handler, register_handler, status_handler},
-};
+use crate::handler::{login_handler, register_handler, status_handler};
 use axum::{
     routing::{get, post},
     Extension, Router,
@@ -13,16 +10,12 @@ use tower_http::trace::TraceLayer;
 
 #[derive(Debug)]
 pub struct State {
-    pub config: GlobalConfig,
     pub db_connection: DatabaseConnection,
 }
 
-pub fn make_router(config: GlobalConfig, db_connection: DatabaseConnection) -> Router {
+pub fn make_router(db_connection: DatabaseConnection) -> Router {
     // Innit shared state
-    let state = Arc::new(State {
-        config,
-        db_connection,
-    });
+    let state = Arc::new(State { db_connection });
     // Create axum router
     let user_routes = Router::new()
         .route("/register", post(register_handler))
