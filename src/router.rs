@@ -25,10 +25,8 @@ pub fn make_router(db_connection: DatabaseConnection) -> Router {
         .nest("/user", user_routes)
         .layer(Extension(state));
 
-    let router = Router::new()
+    Router::new()
         .route("/health_check", get(status_handler))
         .nest("/api", api_routes)
-        .layer(TraceLayer::new_for_http());
-
-    router
+        .layer(TraceLayer::new_for_http())
 }

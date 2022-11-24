@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use axum::{extract::Json, http::StatusCode, Extension};
+use axum::{extract::Json, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
 
