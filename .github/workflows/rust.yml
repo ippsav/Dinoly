@@ -44,6 +44,9 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Migrate Database
+        run: |
+          SKIP_TRUE=true ./scripts/init_db.sh
       - uses: actions-rs/cargo@v1
         with:
           command: test
