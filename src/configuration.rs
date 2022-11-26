@@ -1,3 +1,4 @@
+use sea_orm::ConnectOptions;
 use serde_aux::field_attributes::deserialize_number_from_string;
 use std::path::PathBuf;
 
@@ -5,21 +6,53 @@ use config::{Config, ConfigError, Environment, File, FileFormat};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-pub struct Application {
+pub struct ApplicationSettings {
     pub address: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
 }
 
-impl Application {
+impl ApplicationSettings {
     pub fn address(&self) -> String {
         format!("{}:{}", &self.address, self.port)
     }
 }
 
 #[derive(Debug, Deserialize)]
+pub struct DatabaseSettings {
+    pub host: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub port: u16,
+    pub user: String,
+    pub password: String,
+    pub db_name: String,
+}
+
+impl DatabaseSettings {
+    pub fn get_connection_options(uri: &str) -> ConnectOptions {
+        let mut opt = ConnectOptions::new(uri.to_owned());
+        opt.max_connections(100).sqlx_logging(true);
+
+        opt
+    }
+    pub fn get_connection_string(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            &self.user, &self.password, &self.host, self.port, &self.db_name
+        )
+    }
+    pub fn get_connection_string_without_db(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}",
+            &self.user, &self.password, &self.host, self.port
+        )
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct GlobalConfig {
-    pub application: Application,
+    pub application: ApplicationSettings,
+    pub database: DatabaseSettings,
 }
 
 #[derive(Debug, PartialEq, Eq)]
