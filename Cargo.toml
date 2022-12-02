@@ -20,6 +20,7 @@ path = "src/main.rs"
 [dependencies]
 axum = "0.5.17"
 config = "0.13.2"
+erased-serde = "0.3.23"
 hyper = "0.14.23"
 sea-orm = { version = "0.10.3", features = [
   "runtime-tokio-rustls",
