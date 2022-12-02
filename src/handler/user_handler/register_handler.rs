@@ -35,10 +35,10 @@ impl ErrorToResponse for ApiError {
     fn into_api_response<T: Serialize>(self) -> ApiResponse<T> {
         match self {
             ApiError::BadClientData(err) => ApiResponse::Error {
-                error: ApiResponseError::Complicated {
-                    message: "invalid data from client".into(),
-                    error: Box::new(ResponseError::from(err)),
-                },
+                error: ApiResponseError::complicated_error(
+                    "invalid data from client",
+                    ResponseError::from(err),
+                ),
                 status: StatusCode::BAD_REQUEST,
             },
         }

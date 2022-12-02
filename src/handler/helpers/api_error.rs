@@ -16,6 +16,18 @@ pub enum ApiResponseError {
     },
 }
 
+impl ApiResponseError {
+    pub fn simple_error(msg: &'static str) -> Self {
+        Self::Simple(msg.into())
+    }
+    pub fn complicated_error(msg: &'static str, error: impl Serialize + 'static) -> Self {
+        Self::Complicated {
+            message: msg.into(),
+            error: Box::new(error),
+        }
+    }
+}
+
 impl From<ApiResponseError> for ApiResponseErrorObject {
     fn from(val: ApiResponseError) -> Self {
         match val {
