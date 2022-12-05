@@ -14,7 +14,7 @@ DB_USER="${POSTGRES_USER:=user}"
 DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 DB_HOST="${POSTGRES_HOST:=localhost}"
 DB_PORT="${POSTGRES_PORT:=5432}"
-DB_NAME="${POSTGRES_DB:=postgres}"
+DB_NAME="${POSTGRES_DB:=dinoly-db}"
 
 
 
@@ -41,7 +41,7 @@ fi
 
 
 
-until PGPASSWORD="${DB_PASSWORD}" psql -h "${DB_HOST}" -U "${DB_USER}" -p "${DB_PORT}" -d "${DB_NAME}" -c '\q'; do
+until PGPASSWORD="${DB_PASSWORD}" psql -h "${DB_HOST}" -U "${DB_USER}" -p "${DB_PORT}" -d "postgres" -c '\q'; do
   >&2 echo "Postgres is still unavailable -sleeping"
   sleep 1
 done
