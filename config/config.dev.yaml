@@ -1,6 +1,7 @@
 application:
   address: '0.0.0.0'
   port: 3000
+  hash_secret: 'secret'
 database:
   user: 'user'
   password: 'password'

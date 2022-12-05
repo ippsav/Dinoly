@@ -10,6 +10,7 @@ pub struct ApplicationSettings {
     pub address: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
+    pub hash_secret: String,
 }
 
 impl ApplicationSettings {
