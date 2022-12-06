@@ -72,7 +72,7 @@ impl TestApp {
             .local_addr()
             .expect("couldn't get local address from listener");
         let db = Self::setup_db(&mut self.config.database).await;
-        let router = router::make_router(db.clone());
+        let router = router::make_router(db.clone(), &self.config.application);
 
         tokio::spawn(async move {
             axum::Server::from_tcp(listener)
