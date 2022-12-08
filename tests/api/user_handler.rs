@@ -14,9 +14,6 @@ async fn register_handler_with_success() {
     let mut app = TestApp::new().await;
     app.spawn_server().await;
 
-    // Create client
-    let client = hyper::Client::new();
-
     // User input to register a user
     let username = "test_user";
     let email = "test@email.com";
@@ -34,7 +31,11 @@ async fn register_handler_with_success() {
         .body(Body::from(user_input.to_string()))
         .expect("couldn't create request");
 
-    let response = client.request(req).await.expect("couldn't send request");
+    let response = app
+        .client
+        .request(req)
+        .await
+        .expect("couldn't send request");
 
     // Checking server response
     assert!(response.status().is_success());
@@ -68,9 +69,6 @@ async fn register_handler_with_bad_email() {
     let mut app = TestApp::new().await;
     app.spawn_server().await;
 
-    // Create client
-    let client = hyper::Client::new();
-
     // User input to register a user
     let username = "test_user";
     let email = "bad_email";
@@ -88,7 +86,11 @@ async fn register_handler_with_bad_email() {
         .body(Body::from(user_input.to_string()))
         .expect("couldn't create request");
 
-    let response = client.request(req).await.expect("couldn't send request");
+    let response = app
+        .client
+        .request(req)
+        .await
+        .expect("couldn't send request");
 
     // Checking server response
     assert!(response.status().is_client_error());
@@ -120,9 +122,6 @@ async fn register_handler_with_bad_username() {
     let mut app = TestApp::new().await;
     app.spawn_server().await;
 
-    // Create client
-    let client = hyper::Client::new();
-
     // User input to register a user
     let username = "bad";
     let email = "test@email.com";
@@ -140,7 +139,11 @@ async fn register_handler_with_bad_username() {
         .body(Body::from(user_input.to_string()))
         .expect("couldn't create request");
 
-    let response = client.request(req).await.expect("couldn't send request");
+    let response = app
+        .client
+        .request(req)
+        .await
+        .expect("couldn't send request");
 
     // Checking server response
     assert!(response.status().is_client_error());

@@ -9,9 +9,6 @@ async fn health_route_status() {
     let mut app = TestApp::new().await;
     app.spawn_server().await;
 
-    // Create client
-    let client = hyper::Client::new();
-
     // Create request
     let request = Request::builder()
         .method(Method::GET)
@@ -19,7 +16,8 @@ async fn health_route_status() {
         .body(Body::empty())
         .expect("could not make request");
     // Send request
-    let response = client
+    let response = app
+        .client
         .request(request)
         .await
         .expect("couldn't send request");

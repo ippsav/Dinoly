@@ -1,5 +1,6 @@
 use std::net::TcpListener;
 
+use hyper::{client::HttpConnector, Client};
 use lib::{
     configuration::{DatabaseSettings, GlobalConfig},
     router,
@@ -15,6 +16,7 @@ use sea_orm::{
 pub struct TestApp {
     pub config: GlobalConfig,
     pub database: DatabaseConnection,
+    pub client: Client<HttpConnector>,
 }
 
 impl TestApp {
@@ -27,11 +29,13 @@ impl TestApp {
         let mut config =
             GlobalConfig::build(Some("test".into()), path).expect("couldn't build config");
 
+        // Setup database
         let db = Self::setup_db(&mut config.database).await;
 
         Self {
             config,
             database: db,
+            client: Client::new(),
         }
     }
 
