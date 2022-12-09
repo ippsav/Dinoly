@@ -1,5 +1,5 @@
 use sea_orm::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::entity::{sea_orm_active_enums::Provider, user};
 
@@ -8,17 +8,16 @@ pub struct User {
     pub id: Uuid,
     pub username: String,
     pub email: String,
-    pub password_hash: Option<String>,
     pub provider: Provider,
     pub created_at: DateTime,
     pub updated_at: Option<DateTime>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,
-    pub iat: DateTimeUtc,
-    pub exp: DateTimeUtc,
+    pub iat: i64,
+    pub exp: i64,
 }
 
 impl From<user::Model> for User {
@@ -27,7 +26,6 @@ impl From<user::Model> for User {
             id: v.id,
             username: v.username,
             email: v.email,
-            password_hash: v.password_hash,
             provider: v.provider,
             created_at: v.created_at,
             updated_at: v.updated_at,
