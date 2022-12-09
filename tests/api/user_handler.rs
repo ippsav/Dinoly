@@ -6,7 +6,10 @@ use sea_orm::{query::Condition, ColumnTrait, EntityTrait, QueryFilter};
 
 use lib::entity::user;
 
-use crate::helpers::{server::TestApp, ParseJson};
+use crate::{
+    helpers::{server::TestApp, ParseJson},
+    seeds::users::seed_one_local_user,
+};
 
 #[tokio::test]
 async fn register_handler_with_success() {
@@ -127,9 +130,9 @@ async fn register_handler_with_bad_username() {
     let email = "test@email.com";
 
     let user_input = json!({
-        "username": username.to_owned(),
-        "email": email.to_owned(),
-        "password": "test_password".to_owned(),
+        "username": username,
+        "email": email,
+        "password": "test_password",
     });
     // Create request
     let req = Request::builder()
@@ -183,9 +186,9 @@ async fn register_handler_with_bad_data() {
     let email = "bad email";
 
     let user_input = json!({
-        "username": username.to_owned(),
-        "email": email.to_owned(),
-        "password": "test_password".to_owned(),
+        "username": username,
+        "email": email,
+        "password": "test_password",
     });
     // Create request
     let req = Request::builder()
@@ -220,4 +223,77 @@ async fn register_handler_with_bad_data() {
     });
 
     assert_json_eq!(error_object, expected_error);
+}
+
+#[tokio::test]
+async fn login_handler_with_success() {
+    // Run server
+    let mut app = TestApp::new().await;
+    app.spawn_server().await;
+
+    // Seed database with one user
+    let (user, password) =
+        seed_one_local_user(&app.database, &app.config.application.hash_secret).await;
+
+    let user_input = json!({
+        "username": &user.username,
+        "password": &password,
+    });
+    // Create request
+    let req = Request::builder()
+        .method(Method::GET)
+        .uri(app.get_http_uri(Some("/api/user/login")))
+        .header("Content-Type", "application/json")
+        .body(Body::from(user_input.to_string()))
+        .expect("couldn't create request");
+
+    let response = app
+        .client
+        .request(req)
+        .await
+        .expect("couldn't send request");
+
+    // Checking server response
+    assert!(response.status().is_success());
+
+    let body: Value = response
+        .json_from_body()
+        .await
+        .expect("couldn't get json from body");
+
+    let token = body["data"]["token"].to_string();
+    assert!(!token.is_empty());
+
+    assert!(body["error"].is_null());
+}
+
+#[tokio::test]
+async fn login_handler_with_bad_credentials() {
+    // Run server
+    let mut app = TestApp::new().await;
+    app.spawn_server().await;
+
+    // Seed database with one user
+    let (user, _) = seed_one_local_user(&app.database, &app.config.application.hash_secret).await;
+
+    let user_input = json!({
+        "username": &user.username,
+        "password": "wrong_password",
+    });
+    // Create request
+    let req = Request::builder()
+        .method(Method::GET)
+        .uri(app.get_http_uri(Some("/api/user/login")))
+        .header("Content-Type", "application/json")
+        .body(Body::from(user_input.to_string()))
+        .expect("couldn't create request");
+
+    let response = app
+        .client
+        .request(req)
+        .await
+        .expect("couldn't send request");
+
+    // Checking server response
+    assert!(response.status().is_client_error());
 }

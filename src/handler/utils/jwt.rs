@@ -1,13 +1,14 @@
 use chrono::Duration;
 use jsonwebtoken::{errors::Result, EncodingKey, Header};
+use sea_orm::prelude::Uuid;
 
-use crate::{dto::user::Claims, entity::user};
+use crate::dto::user::Claims;
 
-pub fn encode_jwt(secret: &[u8], user: &user::Model) -> Result<String> {
+pub fn encode_jwt(secret: &[u8], user_id: &Uuid) -> Result<String> {
     let now = chrono::Utc::now();
 
     let claims = Claims {
-        sub: user.id.to_string(),
+        sub: user_id.to_string(),
         iat: now,
         exp: now + Duration::hours(4),
     };
