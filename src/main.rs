@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
 
     // run server
     tracing::debug!("listening on {}", config.application.address());
-    Ok(run(listener, db).await?)
+    Ok(run(listener, db, &config).await?)
 }
 
 #[derive(Error, Debug)]

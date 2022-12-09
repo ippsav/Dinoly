@@ -1,6 +1,8 @@
 application:
   address: '0.0.0.0'
   port: 3000
+  hash_secret: 'hash_secret'
+  jwt_secret: 'jwt_secret'
 database:
   user: 'user'
   password: 'password'

@@ -1,5 +1,6 @@
 use std::net::TcpListener;
 
+use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use lib::{
     configuration::{DatabaseSettings, GlobalConfig},
     router,
@@ -10,11 +11,15 @@ use migration::{Migrator, MigratorTrait};
 use sea_orm::{
     prelude::Uuid, ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Statement,
 };
+use serde_json::{json, Value};
+
+use super::ParseJson;
 
 #[derive(Debug)]
 pub struct TestApp {
     pub config: GlobalConfig,
     pub database: DatabaseConnection,
+    pub client: Client<HttpConnector>,
 }
 
 impl TestApp {
@@ -27,11 +32,13 @@ impl TestApp {
         let mut config =
             GlobalConfig::build(Some("test".into()), path).expect("couldn't build config");
 
+        // Setup database
         let db = Self::setup_db(&mut config.database).await;
 
         Self {
             config,
             database: db,
+            client: Client::new(),
         }
     }
 
@@ -71,8 +78,7 @@ impl TestApp {
         let local_addr = listener
             .local_addr()
             .expect("couldn't get local address from listener");
-        let db = Self::setup_db(&mut self.config.database).await;
-        let router = router::make_router(db.clone());
+        let router = router::make_router(self.database.clone(), &self.config.application);
 
         tokio::spawn(async move {
             axum::Server::from_tcp(listener)
@@ -89,5 +95,34 @@ impl TestApp {
         let path = path.unwrap_or("");
 
         format!("http://{}{}", &self.config.application.address(), path)
+    }
+
+    pub async fn login_user(&self, username: &str, password: &str) -> String {
+        let user_input = json!({
+            "username": username,
+            "password": password,
+        });
+        // Create request
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri(self.get_http_uri(Some("/api/user/login")))
+            .header("Content-Type", "application/json")
+            .body(Body::from(user_input.to_string()))
+            .expect("couldn't create request");
+
+        // Sending request
+
+        let res = self
+            .client
+            .request(req)
+            .await
+            .expect("coudn't send request");
+
+        let body: Value = res.json_from_body().await.expect("couldn't json from body");
+
+        body["data"]["token"]
+            .as_str()
+            .expect("couldn't parse token")
+            .to_owned()
     }
 }
