@@ -19,7 +19,7 @@ use crate::router::State;
 
 // Client data to create a User
 #[derive(Debug, Validate, Deserialize)]
-pub struct CreateUser {
+pub struct RegisterUserInput {
     #[validate(length(min = 6, max = 20))]
     pub username: String,
     #[validate(email)]
@@ -87,7 +87,7 @@ impl From<ValidationErrors> for ResponseError {
 
 #[tracing::instrument]
 pub async fn register_handler(
-    Json(created_user): Json<CreateUser>,
+    Json(created_user): Json<RegisterUserInput>,
     Extension(state): Extension<Arc<State>>,
 ) -> ApiResponse<RegisterResponseObject> {
     // Validating user input
@@ -118,8 +118,8 @@ pub async fn register_handler(
     // Hash password
 
     let hashed_password = match hash_password(
-        created_user.password.as_bytes(),
         state.hash_secret.as_bytes(),
+        created_user.password.as_bytes(),
     )
     .map_err(|_| ApiError::HashingError)
     {
@@ -149,7 +149,7 @@ pub async fn register_handler(
     };
 
     // Creating the jwt token
-    let token = match encode_jwt(state.jwt_secret.as_bytes(), &user)
+    let token = match encode_jwt(state.jwt_secret.as_bytes(), &user.id)
         .map_err(|_| ApiError::JWTEncodingError)
     {
         Ok(value) => value,
