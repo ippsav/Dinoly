@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 
-use hyper::{client::HttpConnector, Client};
+use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use lib::{
     configuration::{DatabaseSettings, GlobalConfig},
     router,
@@ -11,6 +11,9 @@ use migration::{Migrator, MigratorTrait};
 use sea_orm::{
     prelude::Uuid, ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Statement,
 };
+use serde_json::{json, Value};
+
+use super::ParseJson;
 
 #[derive(Debug)]
 pub struct TestApp {
@@ -92,5 +95,34 @@ impl TestApp {
         let path = path.unwrap_or("");
 
         format!("http://{}{}", &self.config.application.address(), path)
+    }
+
+    pub async fn login_user(&self, username: &str, password: &str) -> String {
+        let user_input = json!({
+            "username": username,
+            "password": password,
+        });
+        // Create request
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri(self.get_http_uri(Some("/api/user/login")))
+            .header("Content-Type", "application/json")
+            .body(Body::from(user_input.to_string()))
+            .expect("couldn't create request");
+
+        // Sending request
+
+        let res = self
+            .client
+            .request(req)
+            .await
+            .expect("coudn't send request");
+
+        let body: Value = res.json_from_body().await.expect("couldn't json from body");
+
+        body["data"]["token"]
+            .as_str()
+            .expect("couldn't parse token")
+            .to_owned()
     }
 }

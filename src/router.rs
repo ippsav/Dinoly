@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     configuration::ApplicationSettings,
-    handler::{login_handler, register_handler, status_handler},
+    handler::{login_handler, me_handler, register_handler, status_handler},
 };
 use axum::{
     routing::{get, post},
@@ -31,7 +31,8 @@ pub fn make_router(
     // Create axum router
     let user_routes = Router::new()
         .route("/register", post(register_handler))
-        .route("/login", get(login_handler));
+        .route("/login", get(login_handler))
+        .route("/me", get(me_handler));
 
     let api_routes = Router::new()
         .nest("/user", user_routes)

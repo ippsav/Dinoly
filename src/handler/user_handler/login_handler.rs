@@ -50,6 +50,7 @@ impl ErrorToResponse for ApiError {
     }
 }
 
+#[tracing::instrument]
 pub async fn login_handler(
     Json(user_input): Json<LoginUserInput>,
     Extension(state): Extension<Arc<State>>,
