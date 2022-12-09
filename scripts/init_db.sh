@@ -14,7 +14,7 @@ DB_USER="${POSTGRES_USER:=user}"
 DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 DB_HOST="${POSTGRES_HOST:=localhost}"
 DB_PORT="${POSTGRES_PORT:=5432}"
-DB_NAME="${POSTGRES_DB:=dinoly-db}"
+DB_NAME="${POSTGRES_DB:=postgres}"
 
 
 
