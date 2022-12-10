@@ -1,14 +1,13 @@
-use axum::Extension;
+use axum::extract::State;
 use axum::{http::StatusCode, Json};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 use crate::entity::sea_orm_active_enums::Provider;
 use crate::entity::user;
 use crate::handler::helpers::{ApiResponse, ApiResponseError, ErrorToResponse};
 use crate::handler::utils::{encode_jwt, verify_password};
-use crate::router::State;
+use crate::router::Secrets;
 
 // Client input
 #[derive(Deserialize, Debug)]
@@ -50,16 +49,15 @@ impl ErrorToResponse for ApiError {
     }
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(secrets))]
 pub async fn login_handler(
+    State(secrets): State<Secrets>,
+    State(db_connection): State<DatabaseConnection>,
     Json(user_input): Json<LoginUserInput>,
-    Extension(state): Extension<Arc<State>>,
 ) -> ApiResponse<LoginResponseObject> {
-    let state = state.clone();
-
     let res = match user::Entity::find()
         .filter(user::Column::Username.eq(user_input.username))
-        .one(&state.db_connection)
+        .one(&db_connection)
         .await
         .map_err(|_| ApiError::UserNotFound)
     {
@@ -83,7 +81,7 @@ pub async fn login_handler(
     };
 
     let is_match = match verify_password(
-        state.hash_secret.as_bytes(),
+        secrets.hash_secret.as_bytes(),
         user_input.password.as_bytes(),
         &hashed_password,
     )
@@ -98,7 +96,7 @@ pub async fn login_handler(
     };
 
     // Creating the jwt token
-    let token = match encode_jwt(state.jwt_secret.as_bytes(), &user.id)
+    let token = match encode_jwt(secrets.jwt_secret.as_bytes(), &user.id)
         .map_err(|_| ApiError::JWTEncodingError)
     {
         Ok(value) => value,
