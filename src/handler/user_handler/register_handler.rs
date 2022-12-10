@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::Arc;
 
-use axum::Extension;
+use axum::extract::State;
 use axum::{extract::Json, http::StatusCode};
 use sea_orm::prelude::Uuid;
 use sea_orm::ActiveValue::Set;
-use sea_orm::ColumnTrait;
 use sea_orm::{query::Condition, ActiveModelTrait, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DatabaseConnection};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
 
@@ -15,7 +14,7 @@ use crate::entity::sea_orm_active_enums::Provider;
 use crate::entity::user;
 use crate::handler::helpers::{ApiResponse, ApiResponseError, ErrorToResponse};
 use crate::handler::utils::{encode_jwt, hash_password};
-use crate::router::State;
+use crate::router::Secrets;
 
 // Client data to create a User
 #[derive(Debug, Validate, Deserialize)]
@@ -85,10 +84,11 @@ impl From<ValidationErrors> for ResponseError {
     }
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(secrets))]
 pub async fn register_handler(
+    State(db_connection): State<DatabaseConnection>,
+    State(secrets): State<Secrets>,
     Json(created_user): Json<RegisterUserInput>,
-    Extension(state): Extension<Arc<State>>,
 ) -> ApiResponse<RegisterResponseObject> {
     // Validating user input
     if let Err(error) = created_user.validate().map_err(ApiError::BadClientData) {
@@ -102,7 +102,7 @@ pub async fn register_handler(
                 .add(user::Column::Username.eq(created_user.username.clone()))
                 .add(user::Column::Email.eq(created_user.email.clone())),
         )
-        .one(&state.db_connection)
+        .one(&db_connection)
         .await
     {
         Ok(user) => {
@@ -118,7 +118,7 @@ pub async fn register_handler(
     // Hash password
 
     let hashed_password = match hash_password(
-        state.hash_secret.as_bytes(),
+        secrets.hash_secret.as_bytes(),
         created_user.password.as_bytes(),
     )
     .map_err(|_| ApiError::HashingError)
@@ -138,7 +138,7 @@ pub async fn register_handler(
     };
 
     let user: user::Model = match user
-        .insert(&state.db_connection)
+        .insert(&db_connection)
         .await
         .map_err(|_| ApiError::DbInternalError)
     {
@@ -149,7 +149,7 @@ pub async fn register_handler(
     };
 
     // Creating the jwt token
-    let token = match encode_jwt(state.jwt_secret.as_bytes(), &user.id)
+    let token = match encode_jwt(secrets.jwt_secret.as_bytes(), &user.id)
         .map_err(|_| ApiError::JWTEncodingError)
     {
         Ok(value) => value,

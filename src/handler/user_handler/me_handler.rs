@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 use crate::{
     dto::user::User,
@@ -7,14 +7,15 @@ use crate::{
         helpers::{ApiResponse, ErrorToResponse},
         utils::decode_jwt,
     },
-    router::State,
+    router::Secrets,
 };
 use axum::{
+    extract::State,
     headers::{authorization::Bearer, Authorization},
-    Extension, TypedHeader,
+    TypedHeader,
 };
 use hyper::StatusCode;
-use sea_orm::{prelude::Uuid, EntityTrait};
+use sea_orm::{prelude::Uuid, DatabaseConnection, EntityTrait};
 use serde::Serialize;
 
 pub enum ApiError {
@@ -41,16 +42,15 @@ impl ErrorToResponse for ApiError {
     }
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(secrets))]
 pub async fn me_handler(
+    State(db_connection): State<DatabaseConnection>,
+    State(secrets): State<Secrets>,
     TypedHeader(token): TypedHeader<Authorization<Bearer>>,
-    Extension(state): Extension<Arc<State>>,
 ) -> ApiResponse<MeResponse> {
-    let state = state.clone();
-
     let token = token.token();
 
-    let claims = match decode_jwt(state.jwt_secret.as_bytes(), token)
+    let claims = match decode_jwt(secrets.jwt_secret.as_bytes(), token)
         .map_err(|_| ApiError::InvalidJwtToken)
     {
         Ok(value) => value,
@@ -63,7 +63,7 @@ pub async fn me_handler(
     };
 
     let res = match Users::find_by_id(user_id)
-        .one(&state.db_connection)
+        .one(&db_connection)
         .await
         .map_err(|_| ApiError::DbInternalError)
     {
