@@ -3,6 +3,7 @@ application:
   port: 3000
   hash_secret: 'hash_secret'
   jwt_secret: 'jwt_secret'
+  cors_origin: 'any'
 database:
   user: 'user'
   password: 'password'

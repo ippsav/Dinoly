@@ -12,6 +12,7 @@ pub struct ApplicationSettings {
     pub port: u16,
     pub hash_secret: String,
     pub jwt_secret: String,
+    pub cors_origin: String,
 }
 
 impl ApplicationSettings {

@@ -1,4 +1,5 @@
 pub mod configuration;
+pub mod cors;
 pub mod dto;
 pub mod entity;
 pub mod handler;

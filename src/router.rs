@@ -1,5 +1,6 @@
 use crate::{
     configuration::ApplicationSettings,
+    cors::get_cors_settings,
     handler::{login_handler, me_handler, register_handler, status_handler},
 };
 use axum::{
@@ -42,8 +43,11 @@ pub fn make_router(
 
     let api_routes = Router::new().nest("/user", user_routes).with_state(state);
 
+    let cors_layer = get_cors_settings(app_settings);
+
     Router::new()
         .route("/health_check", get(status_handler))
         .nest("/api", api_routes)
+        .layer(cors_layer)
         .layer(TraceLayer::new_for_http())
 }
