@@ -38,7 +38,7 @@ pub fn make_router(
     // Create axum router
     let user_routes = Router::new()
         .route("/register", post(register_handler))
-        .route("/login", get(login_handler))
+        .route("/login", post(login_handler))
         .route("/me", get(me_handler));
 
     let api_routes = Router::new().nest("/user", user_routes).with_state(state);
