@@ -104,7 +104,7 @@ impl TestApp {
         });
         // Create request
         let req = Request::builder()
-            .method(Method::GET)
+            .method(Method::POST)
             .uri(self.get_http_uri(Some("/api/user/login")))
             .header("Content-Type", "application/json")
             .body(Body::from(user_input.to_string()))

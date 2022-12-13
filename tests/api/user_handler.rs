@@ -241,7 +241,7 @@ async fn login_handler_with_success() {
     });
     // Create request
     let req = Request::builder()
-        .method(Method::GET)
+        .method(Method::POST)
         .uri(app.get_http_uri(Some("/api/user/login")))
         .header("Content-Type", "application/json")
         .body(Body::from(user_input.to_string()))
@@ -282,7 +282,7 @@ async fn login_handler_with_bad_credentials() {
     });
     // Create request
     let req = Request::builder()
-        .method(Method::GET)
+        .method(Method::POST)
         .uri(app.get_http_uri(Some("/api/user/login")))
         .header("Content-Type", "application/json")
         .body(Body::from(user_input.to_string()))
