@@ -17,9 +17,9 @@ use crate::{
 
 #[derive(Debug, Validate, Deserialize)]
 pub struct CreateLinkInput {
-    #[validate(length(min = 6, max = 20))]
+    #[validate(length(min = 4, max = 20))]
     pub name: String,
-    #[validate(length(max = 20))]
+    #[validate(length(min = 5, max = 20))]
     pub slug: String,
     #[validate(url)]
     pub redirect_to: String,
@@ -85,12 +85,14 @@ pub async fn create_url_handler(
         Err(err) => return err.into_api_response(),
     };
 
+    let now = chrono::Utc::now();
     let link = url::ActiveModel {
         id: Set(Uuid::new_v4()),
         name: Set(create_link.name),
         slug: Set(create_link.slug.replace(" ", "")),
         redirect_to: Set(create_link.redirect_to),
         owner_id: Set(user_id),
+        created_at: Set(now.naive_utc()),
         ..Default::default()
     };
     let link: url::Model = match link

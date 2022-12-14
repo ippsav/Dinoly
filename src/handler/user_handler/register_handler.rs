@@ -107,12 +107,14 @@ pub async fn register_handler(
     };
 
     // Creating User model and inserting it
+    let now = chrono::Utc::now();
     let user = user::ActiveModel {
         id: Set(Uuid::new_v4()),
         username: Set(created_user.username),
         email: Set(created_user.email),
         password_hash: Set(Some(hashed_password)),
         provider: Set(Provider::Local),
+        created_at: Set(now.naive_utc()),
         ..Default::default()
     };
 

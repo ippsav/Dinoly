@@ -15,12 +15,7 @@ impl MigrationTrait for Migration {
             .col(ColumnDef::new(Url::Slug).string().not_null().unique_key())
             .col(ColumnDef::new(Url::RedirectTo).text().not_null())
             .col(ColumnDef::new(Url::OwnerId).uuid().not_null())
-            .col(
-                ColumnDef::new(Url::CreatedAt)
-                    .timestamp()
-                    .not_null()
-                    .default("now()"),
-            )
+            .col(ColumnDef::new(Url::CreatedAt).timestamp().not_null())
             .col(ColumnDef::new(Url::UpdatedAt).timestamp().null())
             .col(ColumnDef::new(Url::DeletedAt).timestamp().null())
             .index(

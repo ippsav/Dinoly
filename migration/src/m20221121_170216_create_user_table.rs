@@ -41,12 +41,7 @@ impl MigrationTrait for Migration {
                     )
                     .not_null(),
             )
-            .col(
-                ColumnDef::new(User::CreatedAt)
-                    .timestamp()
-                    .not_null()
-                    .default("now()"),
-            )
+            .col(ColumnDef::new(User::CreatedAt).timestamp().not_null())
             .col(ColumnDef::new(User::UpdatedAt).timestamp().null())
             .col(ColumnDef::new(User::DeletedAt).timestamp().null())
             .index(
