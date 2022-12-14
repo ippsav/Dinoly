@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use axum::{extract::State, Json};
 use hyper::StatusCode;
 use sea_orm::{prelude::Uuid, ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, Set};
@@ -7,6 +5,7 @@ use sea_orm::{Condition, QueryFilter};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
 
+use crate::handler::helpers::ResponseError;
 use crate::{
     dto::url::Url,
     entity::url,
@@ -54,26 +53,6 @@ impl ErrorToResponse for ApiError {
                 ),
                 status: StatusCode::BAD_REQUEST,
             },
-        }
-    }
-}
-
-// TODO: extracting it
-#[derive(Debug, Serialize)]
-pub struct ResponseError {
-    pub fields: Option<HashMap<String, String>>,
-}
-
-impl From<ValidationErrors> for ResponseError {
-    fn from(v: ValidationErrors) -> Self {
-        let mut hash_map: HashMap<String, String> = HashMap::new();
-        v.field_errors().into_iter().for_each(|(k, v)| {
-            let msg = format!("invalid {}", v[0].code);
-
-            hash_map.insert(k.into(), msg);
-        });
-        Self {
-            fields: Some(hash_map),
         }
     }
 }
