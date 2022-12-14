@@ -1,7 +1,7 @@
 use crate::{
     configuration::ApplicationSettings,
     cors::get_cors_settings,
-    handler::{login_handler, me_handler, register_handler, status_handler},
+    handler::{create_url_handler, login_handler, me_handler, register_handler, status_handler},
 };
 use axum::{
     extract::FromRef,
@@ -41,7 +41,12 @@ pub fn make_router(
         .route("/login", post(login_handler))
         .route("/me", get(me_handler));
 
-    let api_routes = Router::new().nest("/user", user_routes).with_state(state);
+    let links_route = Router::new().route("/", post(create_url_handler));
+
+    let api_routes = Router::new()
+        .nest("/user", user_routes)
+        .nest("/links", links_route)
+        .with_state(state);
 
     let cors_layer = get_cors_settings(app_settings);
 
