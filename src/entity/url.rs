@@ -11,6 +11,7 @@ pub struct Model {
     pub name: String,
     #[sea_orm(unique)]
     pub slug: String,
+    #[sea_orm(column_type = "Text")]
     pub redirect_to: String,
     pub owner_id: Uuid,
     pub created_at: DateTime,

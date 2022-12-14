@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
             .col(ColumnDef::new(Url::Id).uuid().not_null().primary_key())
             .col(ColumnDef::new(Url::Name).string().not_null().string_len(30))
             .col(ColumnDef::new(Url::Slug).string().not_null().unique_key())
-            .col(ColumnDef::new(Url::RedirectTo).string().not_null())
+            .col(ColumnDef::new(Url::RedirectTo).text().not_null())
             .col(ColumnDef::new(Url::OwnerId).uuid().not_null())
             .col(
                 ColumnDef::new(Url::CreatedAt)
