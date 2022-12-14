@@ -71,7 +71,7 @@ impl IntoResponse for AuthError {
             AuthError::TokenCreation | AuthError::InternalError => {
                 StatusCode::INTERNAL_SERVER_ERROR
             }
-            AuthError::InvalidToken => StatusCode::BAD_REQUEST,
+            AuthError::InvalidToken => StatusCode::FORBIDDEN,
         };
         status.into_response()
     }
