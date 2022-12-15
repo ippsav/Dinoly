@@ -23,6 +23,7 @@ pub async fn seed_one_local_user(
         email: Set(SafeEmail().fake()),
         password_hash: Set(Some(hashed_password)),
         provider: Set(Provider::Local),
+        created_at: Set(chrono::Utc::now().naive_utc()),
         ..Default::default()
     };
 

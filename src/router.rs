@@ -1,11 +1,14 @@
 use crate::{
     configuration::ApplicationSettings,
     cors::get_cors_settings,
-    handler::{create_url_handler, login_handler, me_handler, register_handler, status_handler},
+    handler::{
+        create_url_handler, get_url_list_handler, login_handler, me_handler, register_handler,
+        status_handler, update_url_handler,
+    },
 };
 use axum::{
     extract::FromRef,
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use sea_orm::DatabaseConnection;
@@ -41,7 +44,10 @@ pub fn make_router(
         .route("/login", post(login_handler))
         .route("/me", get(me_handler));
 
-    let links_route = Router::new().route("/", post(create_url_handler));
+    let links_route = Router::new()
+        .route("/", post(create_url_handler))
+        .route("/:link_id", put(update_url_handler))
+        .route("/", get(get_url_list_handler));
 
     let api_routes = Router::new()
         .nest("/user", user_routes)

@@ -91,7 +91,7 @@ impl TestApp {
         self.config.application.port = local_addr.port();
     }
 
-    pub fn get_http_uri(&self, path: Option<&'static str>) -> String {
+    pub fn get_http_uri(&self, path: Option<&str>) -> String {
         let path = path.unwrap_or("");
 
         format!("http://{}{}", &self.config.application.address(), path)
