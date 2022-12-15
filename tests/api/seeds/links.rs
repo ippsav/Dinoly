@@ -8,11 +8,15 @@ use fake::{
 use lib::entity::url;
 use sea_orm::{
     prelude::Uuid, ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection,
-    EntityTrait, QueryFilter,
+    EntityTrait, QueryFilter, QueryOrder,
 };
 
-pub async fn seed_links_for_user(db: &DatabaseConnection, user_id: &Uuid) -> Vec<url::Model> {
-    let link_models = (0..10).map(|_| url::ActiveModel {
+pub async fn seed_links_for_user(
+    db: &DatabaseConnection,
+    user_id: &Uuid,
+    number_of_links: u32,
+) -> Vec<url::Model> {
+    let link_models = (0..number_of_links).map(|_| url::ActiveModel {
         id: Set(Uuid::new_v4()),
         name: Set(Username().fake()),
         slug: Set(Word().fake()),
@@ -32,6 +36,7 @@ pub async fn seed_links_for_user(db: &DatabaseConnection, user_id: &Uuid) -> Vec
 
     url::Entity::find()
         .filter(url::Column::OwnerId.eq(user_id.clone()))
+        .order_by_desc(url::Column::CreatedAt)
         .all(db)
         .await
         .expect("couldn't get all links")

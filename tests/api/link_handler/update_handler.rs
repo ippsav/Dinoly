@@ -26,7 +26,7 @@ async fn update_link_handler_with_success() {
     let slug = "updated_slug";
     let redirect_to = "https://google.com";
 
-    let create_link_input = json!({
+    let update_link_input = json!({
         "name": name,
         "slug":slug,
         "redirect_to": redirect_to,
@@ -39,7 +39,7 @@ async fn update_link_handler_with_success() {
         .method(Method::PUT)
         .header("Content-Type", "application/json")
         .header("Authorization", format!("Bearer {token}"))
-        .body(Body::from(create_link_input.to_string()))
+        .body(Body::from(update_link_input.to_string()))
         .expect("couldn't create request");
 
     // Send request
@@ -68,4 +68,50 @@ async fn update_link_handler_with_success() {
         }
     });
     assert_json_include!(actual: data, expected: expected_data);
+}
+
+#[tokio::test]
+async fn update_link_handler_with_wrong_owner() {
+    // Run server
+    let mut app = TestApp::new().await;
+    app.spawn_server().await;
+
+    // Seed database with one user
+    let (user1, password1) =
+        seed_one_local_user(&app.database, &app.config.application.hash_secret).await;
+    let (user2, _) = seed_one_local_user(&app.database, &app.config.application.hash_secret).await;
+    // Seed database with a link to update
+    let link = seed_one_link_for_user(&app.database, &user2.id).await;
+    // Get token by logging in
+    let token = app.login_user(&user1.username, &password1).await;
+
+    // Link input to register a user
+    let name = "updated_name";
+    let slug = "updated_slug";
+    let redirect_to = "https://google.com";
+
+    let update_link_input = json!({
+        "name": name,
+        "slug":slug,
+        "redirect_to": redirect_to,
+    });
+
+    // Create request
+    let path = &format!("/api/links/{}", &link.id);
+    let req = Request::builder()
+        .uri(app.get_http_uri(Some(path)))
+        .method(Method::PUT)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {token}"))
+        .body(Body::from(update_link_input.to_string()))
+        .expect("couldn't create request");
+
+    // Send request
+    let res = app
+        .client
+        .request(req)
+        .await
+        .expect("coudln't send request");
+    // Checking server response
+    assert!(res.status().is_client_error());
 }
