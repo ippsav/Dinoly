@@ -6,8 +6,9 @@ use sea_orm::{query::Condition, ColumnTrait, EntityTrait, QueryFilter};
 
 use lib::entity::user;
 
+use crate::helpers::testing::TestCase;
 use crate::{
-    helpers::{server::TestApp, ParseJson, TestCase},
+    helpers::{server::TestApp, ParseJson},
     seeds::users::seed_one_local_user,
 };
 
@@ -72,58 +73,7 @@ async fn register_handler_with_bad_client_data() {
     let mut app = TestApp::new().await;
     app.spawn_server().await;
 
-    let inputs_with_errors = vec![
-        (
-            json!({
-                    "username": "dw",
-                    "email": "user@email.com",
-                    "password": "long_password"
-            }),
-            json!({
-                "message": "invalid data from client",
-                "error": {
-                    "fields": {
-                        "username": "invalid length"
-                    }
-                }
-            }),
-        ),
-        (
-            json!({
-                    "username": "dw",
-                    "email": "bad_email",
-                    "password": "long_password"
-            }),
-            json!({
-                "message": "invalid data from client",
-                "error": {
-                    "fields": {
-                        "username": "invalid length",
-                        "email": "invalid email"
-                    }
-                }
-            }),
-        ),
-        (
-            json!({
-                    "username": "dw",
-                    "email": "bad_email",
-                    "password": "qwe"
-            }),
-            json!({
-                "message": "invalid data from client",
-                "error": {
-                    "fields": {
-                        "username": "invalid length",
-                        "password": "invalid length",
-                        "email": "invalid email"
-                    }
-                }
-            }),
-        ),
-    ];
-
-    let test_cases = TestCase::gen_test_cases(&inputs_with_errors);
+    let test_cases = TestCase::gen_test_cases_from_file("register_user_handler_inputs");
 
     for test_case in test_cases.into_iter() {
         let req = Request::builder()

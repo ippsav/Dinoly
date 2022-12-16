@@ -1,0 +1,50 @@
+[
+  {
+    "input": {
+      "username": "sh",
+      "email": "user@email.com",
+      "password": "long_password"
+    },
+    "error": {
+      "message": "invalid data from client",
+      "error": {
+        "fields": {
+          "username": "invalid length"
+        }
+      }
+    }
+  },
+  {
+    "input": {
+      "username": "sh",
+      "email": "bad_email",
+      "password": "long_password"
+    },
+    "error": {
+      "message": "invalid data from client",
+      "error": {
+        "fields": {
+          "email": "invalid email",
+          "username": "invalid length"
+        }
+      }
+    }
+  },
+  {
+    "input": {
+      "username": "sh",
+      "email": "bad_email",
+      "password": "sh"
+    },
+    "error": {
+      "message": "invalid data from client",
+      "error": {
+        "fields": {
+          "email": "invalid email",
+          "username": "invalid length",
+          "password": "invalid length"
+        }
+      }
+    }
+  }
+]

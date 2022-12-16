@@ -2,8 +2,9 @@ use assert_json_diff::{assert_json_eq, assert_json_include};
 use hyper::{Body, Method, Request};
 use serde_json::{json, Value};
 
+use crate::helpers::testing::TestCase;
 use crate::{
-    helpers::{server::TestApp, ParseJson, TestCase},
+    helpers::{server::TestApp, ParseJson},
     seeds::users::seed_one_local_user,
 };
 
@@ -79,58 +80,7 @@ async fn create_link_handler_with_bad_client_data() {
     // Get token by logging in
     let token = app.login_user(&user.username, &password).await;
 
-    let inputs_with_errors = vec![
-        (
-            json!({
-                    "name": "link_name",
-                    "slug": "link_slug",
-                    "redirect_to": "bad url"
-            }),
-            json!({
-                "message": "invalid data from client",
-                "error": {
-                    "fields": {
-                        "redirect_to": "invalid url"
-                    }
-                }
-            }),
-        ),
-        (
-            json!({
-                    "name": "wd",
-                    "slug": "link_slug",
-                    "redirect_to": "bad url"
-            }),
-            json!({
-                "message": "invalid data from client",
-                "error": {
-                    "fields": {
-                        "redirect_to": "invalid url",
-                        "name": "invalid length"
-                    }
-                }
-            }),
-        ),
-        (
-            json!({
-                    "name": "wd",
-                    "slug": "wd",
-                    "redirect_to": "bad url"
-            }),
-            json!({
-                "message": "invalid data from client",
-                "error": {
-                    "fields": {
-                        "redirect_to": "invalid url",
-                        "name": "invalid length",
-                        "slug": "invalid length"
-                    }
-                }
-            }),
-        ),
-    ];
-
-    let test_cases = TestCase::gen_test_cases(&inputs_with_errors);
+    let test_cases = TestCase::gen_test_cases_from_file("create_url_handler_inputs");
 
     for test_case in test_cases.into_iter() {
         let req = Request::builder()

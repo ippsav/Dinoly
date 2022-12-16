@@ -1,0 +1,50 @@
+[
+  {
+    "input": {
+      "name": "link_name",
+      "slug": "link_slug",
+      "redirect_to": "bad_url"
+    },
+    "error": {
+      "message": "invalid data from client",
+      "error": {
+        "fields": {
+          "redirect_to": "invalid url"
+        }
+      }
+    }
+  },
+  {
+    "input": {
+      "name": "sh",
+      "slug": "link_slug",
+      "redirect_to": "bad_url"
+    },
+    "error": {
+      "message": "invalid data from client",
+      "error": {
+        "fields": {
+          "redirect_to": "invalid url",
+          "name": "invalid length"
+        }
+      }
+    }
+  },
+  {
+    "input": {
+      "name": "sh",
+      "slug": "sh",
+      "redirect_to": "bad_url"
+    },
+    "error": {
+      "message": "invalid data from client",
+      "error": {
+        "fields": {
+          "redirect_to": "invalid url",
+          "name": "invalid length",
+          "slug": "invalid length"
+        }
+      }
+    }
+  }
+]
