@@ -89,7 +89,7 @@ pub async fn create_url_handler(
     let link = url::ActiveModel {
         id: Set(Uuid::new_v4()),
         name: Set(create_link.name),
-        slug: Set(create_link.slug.replace(" ", "")),
+        slug: Set(create_link.slug.replace(' ', "")),
         redirect_to: Set(create_link.redirect_to),
         owner_id: Set(user_id),
         created_at: Set(now.naive_utc()),

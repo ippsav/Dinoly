@@ -5,7 +5,7 @@ use axum::{
 };
 use chrono::Utc;
 use hyper::StatusCode;
-use sea_orm::{prelude::Uuid, ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
+use sea_orm::{prelude::Uuid, ActiveModelTrait, DatabaseConnection, EntityTrait, Set, QueryFilter, ColumnTrait};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
 
@@ -29,7 +29,7 @@ pub struct UpdateLinkInput {
 
 pub enum ApiError {
     BadClientData(ValidationErrors),
-    LinkNoFound,
+    LinkNotFound,
     ForbiddenUpdate,
     DBInternalError,
 }
@@ -44,7 +44,7 @@ impl ErrorToResponse for ApiError {
                 ),
                 status: StatusCode::BAD_REQUEST,
             },
-            ApiError::LinkNoFound => ApiResponse::Error {
+            ApiError::LinkNotFound => ApiResponse::Error {
                 error: ApiResponseError::simple_error("link not found"),
                 status: StatusCode::NOT_FOUND,
             },
@@ -68,12 +68,13 @@ pub async fn update_url_handler(
 ) -> ApiResponse<UpdateLinkResponse> {
     if let Err(err) = update_link
         .validate()
-        .map_err(|err| ApiError::BadClientData(err))
+        .map_err(ApiError::BadClientData)
     {
         return err.into_api_response();
     };
 
     let link = match Link::find_by_id(link_id)
+        .filter(url::Column::DeletedAt.is_null())
         .one(&db)
         .await
         .map_err(|_| ApiError::DBInternalError)
@@ -82,7 +83,7 @@ pub async fn update_url_handler(
         Err(err) => return err.into_api_response(),
     };
 
-    let link: url::Model = match link.ok_or(ApiError::LinkNoFound) {
+    let link: url::Model = match link.ok_or(ApiError::LinkNotFound) {
         Ok(v) => v,
         Err(err) => return err.into_api_response(),
     };

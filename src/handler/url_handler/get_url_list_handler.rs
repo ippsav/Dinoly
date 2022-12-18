@@ -2,7 +2,7 @@ use axum::extract::Query;
 use axum::extract::State;
 use hyper::StatusCode;
 use sea_orm::QueryOrder;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
+use sea_orm::{Condition, ColumnTrait, DatabaseConnection, EntityTrait};
 use sea_orm::{QueryFilter, QuerySelect};
 use serde::{Deserialize, Serialize};
 
@@ -54,8 +54,11 @@ pub async fn get_url_list_handler(
     State(db): State<DatabaseConnection>,
 ) -> ApiResponse<GetLinkListResponse> {
     let Query(params) = params.unwrap_or_default();
+    let conditions = Condition::all()
+        .add(url::Column::OwnerId.eq(user_id))
+        .add(url::Column::DeletedAt.is_null());
     let mut query = url::Entity::find()
-        .filter(url::Column::OwnerId.eq(user_id))
+        .filter(conditions)
         .order_by_desc(url::Column::CreatedAt);
 
     if let Some(limit) = params.limit {
