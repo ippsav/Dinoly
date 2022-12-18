@@ -1,34 +1,19 @@
 use crate::entity::url::{self, Entity as Link};
-use axum::{
-    extract::{Path, State},
-    Json,
-};
-use chrono::Utc;
+use axum::extract::{Path, State};
 use hyper::StatusCode;
-use sea_orm::{prelude::Uuid, ActiveModelTrait, DatabaseConnection, EntityTrait, Set, QueryFilter, ColumnTrait};
-use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationErrors};
+use sea_orm::{prelude::Uuid, DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait};
+use serde::Serialize;
 
 use crate::{
     dto::url::Url,
     handler::{
-        helpers::{ApiResponse, ApiResponseError, ErrorToResponse, ResponseError},
+        helpers::{ApiResponse, ApiResponseError, ErrorToResponse},
         utils::UserId,
     },
 };
 
-#[derive(Debug, Deserialize, Validate)]
-pub struct UpdateLinkInput {
-    #[validate(length(min = 4, max = 20))]
-    pub name: Option<String>,
-    #[validate(length(min = 4, max = 20))]
-    pub slug: Option<String>,
-    #[validate(url)]
-    pub redirect_to: Option<String>,
-}
 
 pub enum ApiError {
-    BadClientData(ValidationErrors),
     LinkNotFound,
     ForbiddenRequest,
     DBInternalError,
@@ -37,13 +22,6 @@ pub enum ApiError {
 impl ErrorToResponse for ApiError {
     fn into_api_response<T: Serialize>(self) -> ApiResponse<T> {
         match self {
-            ApiError::BadClientData(err) => ApiResponse::Error {
-                error: ApiResponseError::complicated_error(
-                    "invalid data from client",
-                    ResponseError::from(err),
-                ),
-                status: StatusCode::BAD_REQUEST,
-            },
             ApiError::LinkNotFound => ApiResponse::Error {
                 error: ApiResponseError::simple_error("link not found"),
                 status: StatusCode::NOT_FOUND,
