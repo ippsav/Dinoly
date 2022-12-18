@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 use axum::extract::State;
@@ -12,7 +11,7 @@ use validator::{Validate, ValidationErrors};
 
 use crate::entity::sea_orm_active_enums::Provider;
 use crate::entity::user;
-use crate::handler::helpers::{ApiResponse, ApiResponseError, ErrorToResponse};
+use crate::handler::helpers::{ApiResponse, ApiResponseError, ErrorToResponse, ResponseError};
 use crate::handler::utils::{encode_jwt, hash_password};
 use crate::router::Secrets;
 
@@ -64,26 +63,6 @@ impl ErrorToResponse for ApiError {
     }
 }
 
-// Response error object
-#[derive(Debug, Serialize)]
-pub struct ResponseError {
-    pub fields: Option<HashMap<String, String>>,
-}
-
-impl From<ValidationErrors> for ResponseError {
-    fn from(v: ValidationErrors) -> Self {
-        let mut hash_map: HashMap<String, String> = HashMap::new();
-        v.field_errors().into_iter().for_each(|(k, v)| {
-            let msg = format!("invalid {}", v[0].code);
-
-            hash_map.insert(k.into(), msg);
-        });
-        Self {
-            fields: Some(hash_map),
-        }
-    }
-}
-
 #[tracing::instrument(skip(secrets))]
 pub async fn register_handler(
     State(db_connection): State<DatabaseConnection>,
@@ -128,12 +107,14 @@ pub async fn register_handler(
     };
 
     // Creating User model and inserting it
+    let now = chrono::Utc::now();
     let user = user::ActiveModel {
         id: Set(Uuid::new_v4()),
         username: Set(created_user.username),
         email: Set(created_user.email),
         password_hash: Set(Some(hashed_password)),
         provider: Set(Provider::Local),
+        created_at: Set(now.naive_utc()),
         ..Default::default()
     };
 

@@ -6,6 +6,7 @@ use sea_orm::{query::Condition, ColumnTrait, EntityTrait, QueryFilter};
 
 use lib::entity::user;
 
+use crate::helpers::testing::TestCase;
 use crate::{
     helpers::{server::TestApp, ParseJson},
     seeds::users::seed_one_local_user,
@@ -22,9 +23,9 @@ async fn register_handler_with_success() {
     let email = "test@email.com";
 
     let user_input = json!({
-        "username": username.to_owned(),
-        "email": email.to_owned(),
-        "password": "test_password".to_owned(),
+        "username": username,
+        "email": email,
+        "password": "test_password",
     });
     // Create request
     let req = Request::builder()
@@ -67,162 +68,39 @@ async fn register_handler_with_success() {
 }
 
 #[tokio::test]
-async fn register_handler_with_bad_email() {
+async fn register_handler_with_bad_client_data() {
     // Run server
     let mut app = TestApp::new().await;
     app.spawn_server().await;
 
-    // User input to register a user
-    let username = "test_user";
-    let email = "bad_email";
+    let test_cases = TestCase::gen_test_cases_from_file("register_user_handler_inputs");
 
-    let user_input = json!({
-        "username": username.to_owned(),
-        "email": email.to_owned(),
-        "password": "test_password".to_owned(),
-    });
-    // Create request
-    let req = Request::builder()
-        .method(Method::POST)
-        .uri(app.get_http_uri(Some("/api/user/register")))
-        .header("Content-Type", "application/json")
-        .body(Body::from(user_input.to_string()))
-        .expect("couldn't create request");
+    for test_case in test_cases.into_iter() {
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri(app.get_http_uri(Some("/api/user/register")))
+            .header("Content-Type", "application/json")
+            .body(Body::from(test_case.input.to_string()))
+            .expect("couldn't create request");
+        // Send request
+        let res = app
+            .client
+            .request(req)
+            .await
+            .expect("coudln't send request");
+        // Checking server response
+        assert!(res.status().is_client_error());
 
-    let response = app
-        .client
-        .request(req)
-        .await
-        .expect("couldn't send request");
+        let body: Value = res
+            .json_from_body()
+            .await
+            .expect("couldn't get json from body");
 
-    // Checking server response
-    assert!(response.status().is_client_error());
+        assert!(body["data"].is_null());
 
-    let body: Value = response
-        .json_from_body()
-        .await
-        .expect("couldn't get json from body");
-
-    assert!(body["data"].is_null());
-
-    let error_object = body["error"].to_owned();
-
-    let expected_error = json!({
-        "error": {
-            "fields": {
-                "email": "invalid email"
-            }
-        },
-        "message": "invalid data from client",
-    });
-
-    assert_json_eq!(error_object, expected_error);
-}
-
-#[tokio::test]
-async fn register_handler_with_bad_username() {
-    // Run server
-    let mut app = TestApp::new().await;
-    app.spawn_server().await;
-
-    // User input to register a user
-    let username = "bad";
-    let email = "test@email.com";
-
-    let user_input = json!({
-        "username": username,
-        "email": email,
-        "password": "test_password",
-    });
-    // Create request
-    let req = Request::builder()
-        .method(Method::POST)
-        .uri(app.get_http_uri(Some("/api/user/register")))
-        .header("Content-Type", "application/json")
-        .body(Body::from(user_input.to_string()))
-        .expect("couldn't create request");
-
-    let response = app
-        .client
-        .request(req)
-        .await
-        .expect("couldn't send request");
-
-    // Checking server response
-    assert!(response.status().is_client_error());
-
-    let body: Value = response
-        .json_from_body()
-        .await
-        .expect("couldn't get json from body");
-
-    assert!(body["data"].is_null());
-
-    let error_object = body["error"].to_owned();
-
-    let expected_error = json!({
-        "error": {
-            "fields": {
-                "username": "invalid length"
-            }
-        },
-        "message": "invalid data from client",
-    });
-
-    assert_json_eq!(error_object, expected_error);
-}
-
-#[tokio::test]
-async fn register_handler_with_bad_data() {
-    // Run server
-    let mut app = TestApp::new().await;
-    app.spawn_server().await;
-
-    // Create client
-    let client = hyper::Client::new();
-
-    // User input to register a user
-    let username = "bad";
-    let email = "bad email";
-
-    let user_input = json!({
-        "username": username,
-        "email": email,
-        "password": "test_password",
-    });
-    // Create request
-    let req = Request::builder()
-        .method(Method::POST)
-        .uri(app.get_http_uri(Some("/api/user/register")))
-        .header("Content-Type", "application/json")
-        .body(Body::from(user_input.to_string()))
-        .expect("couldn't create request");
-
-    let response = client.request(req).await.expect("couldn't send request");
-
-    // Checking server response
-    assert!(response.status().is_client_error());
-
-    let body: Value = response
-        .json_from_body()
-        .await
-        .expect("couldn't get json from body");
-
-    assert!(body["data"].is_null());
-
-    let error_object = body["error"].to_owned();
-
-    let expected_error = json!({
-        "error": {
-            "fields": {
-                "username": "invalid length",
-                "email": "invalid email"
-            }
-        },
-        "message": "invalid data from client",
-    });
-
-    assert_json_eq!(error_object, expected_error);
+        let error: Value = body["error"].to_owned();
+        assert_json_eq!(error, test_case.error);
+    }
 }
 
 #[tokio::test]

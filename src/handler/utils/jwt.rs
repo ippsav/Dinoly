@@ -1,12 +1,10 @@
 use chrono::Duration;
-use jsonwebtoken::{
-    decode, errors::Result, Algorithm, DecodingKey, EncodingKey, Header, Validation,
-};
+use jsonwebtoken::{decode, errors, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use sea_orm::prelude::Uuid;
 
 use crate::dto::user::Claims;
 
-pub fn encode_jwt(secret: &[u8], user_id: &Uuid) -> Result<String> {
+pub fn encode_jwt(secret: &[u8], user_id: &Uuid) -> errors::Result<String> {
     let now = chrono::Utc::now();
 
     let claims = Claims {
@@ -22,7 +20,7 @@ pub fn encode_jwt(secret: &[u8], user_id: &Uuid) -> Result<String> {
     )
 }
 
-pub fn decode_jwt(secret: &[u8], token: &str) -> Result<Claims> {
+pub fn decode_jwt(secret: &[u8], token: &str) -> errors::Result<Claims> {
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret),
