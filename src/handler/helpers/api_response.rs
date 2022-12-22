@@ -3,10 +3,6 @@ use serde::Serialize;
 
 use super::{ApiResponseError, ApiResponseErrorObject};
 
-pub trait ErrorToResponse {
-    fn into_api_response<T: Serialize ,E: Serialize>(self) -> ApiResponse<T,E>;
-}
-
 // Response types
 pub enum ApiResponseType {
     SuccessWithData,

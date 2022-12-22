@@ -43,11 +43,6 @@ impl From<ApiResponseError> for ApiResponseErrorObject {
     }
 }
 
-impl From<&'static str> for ApiResponseError {
-    fn from(message: &'static str) -> Self {
-        Self::Simple(message.into())
-    }
-}
 
 /*
     example 1:

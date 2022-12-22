@@ -1,16 +1,14 @@
-use axum::extract::Query;
-use axum::extract::State;
-use hyper::StatusCode;
+use axum::{extract::{Query, State}, http::StatusCode};
 use sea_orm::QueryOrder;
 use sea_orm::{Condition, ColumnTrait, DatabaseConnection, EntityTrait};
 use sea_orm::{QueryFilter, QuerySelect};
 use serde::{Deserialize, Serialize};
 
-use crate::entity::url;
+use crate::{entity::url, handler::helpers::ApiResponseData};
 use crate::{
     dto::url::Url,
     handler::{
-        helpers::{ApiResponse, ErrorToResponse},
+        helpers::ApiResponse,
         utils::UserId,
     },
 };
@@ -24,10 +22,13 @@ pub enum ApiError {
     DBInternalError,
 }
 
-impl ErrorToResponse for ApiError {
-    fn into_api_response<T: Serialize>(self) -> ApiResponse<T> {
-        match self {
-            ApiError::DBInternalError => ApiResponse::StatusCode(StatusCode::INTERNAL_SERVER_ERROR),
+impl<E> From<ApiError> for ApiResponseData<E>
+    where
+        E: Serialize + 'static
+{
+    fn from(value: ApiError) -> Self {
+        match value {
+            ApiError::DBInternalError => ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR),
         }
     }
 }
@@ -52,7 +53,7 @@ pub async fn get_url_list_handler(
     UserId(user_id): UserId,
     params: Option<Query<Pagination>>,
     State(db): State<DatabaseConnection>,
-) -> ApiResponse<GetLinkListResponse> {
+) -> ApiResponse<GetLinkListResponse, ()> {
     let Query(params) = params.unwrap_or_default();
     let conditions = Condition::all()
         .add(url::Column::OwnerId.eq(user_id))
@@ -69,15 +70,11 @@ pub async fn get_url_list_handler(
         query = query.offset(offset);
     }
 
-    let links = match query.all(&db).await.map_err(|_| ApiError::DBInternalError) {
-        Ok(v) => v,
-        Err(err) => return err.into_api_response(),
+    let links = query.all(&db).await.map_err(|_| ApiError::DBInternalError)?;
+
+    let data = GetLinkListResponse {
+        links: links.into_iter().map(Into::into).collect(),
     };
 
-    ApiResponse::Data {
-        data: GetLinkListResponse {
-            links: links.into_iter().map(Into::into).collect(),
-        },
-        status: StatusCode::OK,
-    }
+    Ok(ApiResponseData::success_with_data(data, StatusCode::OK))
 }

@@ -1,13 +1,12 @@
-use crate::entity::url::{self, Entity as Link};
-use axum::extract::{Path, State};
-use hyper::StatusCode;
+use crate::{entity::url::{self, Entity as Link}, handler::helpers::ApiResponseData};
+use axum::{extract::{Path, State}, http::StatusCode};
 use sea_orm::{prelude::Uuid, DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait};
 use serde::Serialize;
 
 use crate::{
     dto::url::Url,
     handler::{
-        helpers::{ApiResponse, ApiResponseError, ErrorToResponse},
+        helpers::ApiResponse,
         utils::UserId,
     },
 };
@@ -19,15 +18,15 @@ pub enum ApiError {
     DBInternalError,
 }
 
-impl ErrorToResponse for ApiError {
-    fn into_api_response<T: Serialize>(self) -> ApiResponse<T> {
-        match self {
-            ApiError::LinkNotFound => ApiResponse::Error {
-                error: ApiResponseError::simple_error("link not found"),
-                status: StatusCode::NOT_FOUND,
-            },
-            ApiError::ForbiddenRequest => ApiResponse::StatusCode(StatusCode::FORBIDDEN),
-            ApiError::DBInternalError => ApiResponse::StatusCode(StatusCode::INTERNAL_SERVER_ERROR),
+impl<E> From<ApiError> for ApiResponseData<E>
+    where
+        E: Serialize + 'static,
+{
+    fn from(value: ApiError) -> Self {
+        match value {
+            ApiError::LinkNotFound => ApiResponseData::error(None, "link not found", StatusCode::NOT_FOUND),
+            ApiError::ForbiddenRequest => ApiResponseData::status_code(StatusCode::FORBIDDEN),
+            ApiError::DBInternalError => ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR),
         }
     }
 }
@@ -42,31 +41,23 @@ pub async fn get_url_handler(
     UserId(user_id): UserId,
     Path(link_id): Path<Uuid>,
     State(db): State<DatabaseConnection>,
-) -> ApiResponse<GetLinkResponse> {
+) -> ApiResponse<GetLinkResponse,()> {
 
-    let link = match Link::find_by_id(link_id)
+    let link = Link::find_by_id(link_id)
         .filter(url::Column::DeletedAt.is_null())
         .one(&db)
         .await
-        .map_err(|_| ApiError::DBInternalError)
-    {
-        Ok(v) => v,
-        Err(err) => return err.into_api_response(),
-    };
+        .map_err(|_| ApiError::DBInternalError)?;
 
-    let link: url::Model = match link.ok_or(ApiError::LinkNotFound) {
-        Ok(v) => v,
-        Err(err) => return err.into_api_response(),
-    };
+    let link: url::Model = link.ok_or(ApiError::LinkNotFound)?; 
 
     if link.owner_id != user_id {
-        return ApiError::ForbiddenRequest.into_api_response();
+        return Err(ApiError::ForbiddenRequest.into());
     };
 
-    ApiResponse::Data {
-        data: GetLinkResponse {
-            link: link.into(),
-        },
-        status: StatusCode::OK,
-    }
+    let data = GetLinkResponse {
+        link: link.into(),
+    };
+
+    Ok(ApiResponseData::success_with_data(data, StatusCode::OK))
 }
