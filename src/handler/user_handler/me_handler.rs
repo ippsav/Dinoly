@@ -4,7 +4,7 @@ use crate::{
     dto::user::User,
     entity::user::Entity as Users,
     handler::{
-        helpers::{ApiResponse, ErrorToResponse},
+        helpers::{ApiResponse, ApiResponseData, ResponseError},
         utils::decode_jwt,
     },
     router::Secrets,
@@ -12,9 +12,9 @@ use crate::{
 use axum::{
     extract::State,
     headers::{authorization::Bearer, Authorization},
+    http::StatusCode,
     TypedHeader,
 };
-use hyper::StatusCode;
 use sea_orm::{prelude::Uuid, DatabaseConnection, EntityTrait};
 use serde::Serialize;
 
@@ -30,14 +30,15 @@ pub struct MeResponse {
     pub user: User,
 }
 
-impl ErrorToResponse for ApiError {
-    fn into_api_response<T: serde::Serialize>(self) -> ApiResponse<T> {
-        match self {
-            ApiError::InvalidJwtToken | ApiError::InvalidIdFormat => {
-                ApiResponse::StatusCode(StatusCode::NOT_ACCEPTABLE)
-            }
-            ApiError::DbInternalError => ApiResponse::StatusCode(StatusCode::INTERNAL_SERVER_ERROR),
-            ApiError::UserNotFound => ApiResponse::StatusCode(StatusCode::BAD_REQUEST),
+impl<E> From<ApiError> for ApiResponseData<E>
+    where
+        E: Serialize + 'static,
+{
+    fn from(value: ApiError) -> Self {
+        match value {
+            ApiError::InvalidJwtToken | ApiError::InvalidIdFormat => ApiResponseData::status_code(StatusCode::NOT_ACCEPTABLE),
+            ApiError::DbInternalError => ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR),
+            ApiError::UserNotFound => ApiResponseData::status_code(StatusCode::BAD_REQUEST),
         }
     }
 }
@@ -47,37 +48,26 @@ pub async fn me_handler(
     State(db_connection): State<DatabaseConnection>,
     State(secrets): State<Secrets>,
     TypedHeader(token): TypedHeader<Authorization<Bearer>>,
-) -> ApiResponse<MeResponse> {
+) -> ApiResponse<MeResponse, ResponseError> {
     let token = token.token();
 
-    let claims = match decode_jwt(secrets.jwt_secret.as_bytes(), token)
-        .map_err(|_| ApiError::InvalidJwtToken)
-    {
-        Ok(value) => value,
-        Err(err) => return err.into_api_response(),
-    };
+    let claims = decode_jwt(secrets.jwt_secret.as_bytes(), token)
+        .map_err(|_| ApiError::InvalidJwtToken)?;
 
-    let user_id = match Uuid::from_str(&claims.sub).map_err(|_| ApiError::InvalidIdFormat) {
-        Ok(value) => value,
-        Err(err) => return err.into_api_response(),
-    };
+    let user_id = Uuid::from_str(&claims.sub).map_err(|_| ApiError::InvalidIdFormat)?;
 
-    let res = match Users::find_by_id(user_id)
+    let res = Users::find_by_id(user_id)
         .one(&db_connection)
         .await
-        .map_err(|_| ApiError::DbInternalError)
-    {
-        Ok(value) => value,
-        Err(err) => return err.into_api_response(),
+        .map_err(|_| ApiError::DbInternalError)?;
+
+    let user = res.ok_or(ApiError::UserNotFound)?;
+
+    let data = MeResponse {
+        user: user.into(),
     };
 
-    let user = match res.ok_or(ApiError::UserNotFound) {
-        Ok(value) => value,
-        Err(err) => return err.into_api_response(),
-    };
-
-    ApiResponse::Data {
-        data: MeResponse { user: user.into() },
-        status: StatusCode::OK,
-    }
+    Ok(
+        ApiResponseData::success_with_data(data, StatusCode::OK)
+    )
 }

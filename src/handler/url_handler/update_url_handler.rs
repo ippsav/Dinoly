@@ -1,10 +1,10 @@
-use crate::entity::url::{self, Entity as Link};
+use crate::{entity::url::{self, Entity as Link}, handler::helpers::ApiResponseData};
 use axum::{
     extract::{Path, State},
+    http::StatusCode,
     Json,
 };
 use chrono::Utc;
-use hyper::StatusCode;
 use sea_orm::{prelude::Uuid, ActiveModelTrait, DatabaseConnection, EntityTrait, Set, QueryFilter, ColumnTrait};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
@@ -12,7 +12,7 @@ use validator::{Validate, ValidationErrors};
 use crate::{
     dto::url::Url,
     handler::{
-        helpers::{ApiResponse, ApiResponseError, ErrorToResponse, ResponseError},
+        helpers::{ApiResponse, ResponseError},
         utils::UserId,
     },
 };
@@ -34,22 +34,14 @@ pub enum ApiError {
     DBInternalError,
 }
 
-impl ErrorToResponse for ApiError {
-    fn into_api_response<T: Serialize>(self) -> ApiResponse<T> {
-        match self {
-            ApiError::BadClientData(err) => ApiResponse::Error {
-                error: ApiResponseError::complicated_error(
-                    "invalid data from client",
-                    ResponseError::from(err),
-                ),
-                status: StatusCode::BAD_REQUEST,
-            },
-            ApiError::LinkNotFound => ApiResponse::Error {
-                error: ApiResponseError::simple_error("link not found"),
-                status: StatusCode::NOT_FOUND,
-            },
-            ApiError::ForbiddenUpdate => ApiResponse::StatusCode(StatusCode::FORBIDDEN),
-            ApiError::DBInternalError => ApiResponse::StatusCode(StatusCode::INTERNAL_SERVER_ERROR),
+
+impl From<ApiError> for ApiResponseData<ResponseError> {
+    fn from(value: ApiError) -> Self {
+        match value {
+            ApiError::BadClientData(err) => ApiResponseData::error(Some(ResponseError::from(err)), "invalid data from client", StatusCode::BAD_REQUEST),
+            ApiError::LinkNotFound => ApiResponseData::error(None, "link not found", StatusCode::NOT_FOUND),
+            ApiError::ForbiddenUpdate => ApiResponseData::status_code(StatusCode::FORBIDDEN),
+            ApiError::DBInternalError => ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR),
         }
     }
 }
@@ -65,31 +57,21 @@ pub async fn update_url_handler(
     Path(link_id): Path<Uuid>,
     State(db): State<DatabaseConnection>,
     Json(update_link): Json<UpdateLinkInput>,
-) -> ApiResponse<UpdateLinkResponse> {
-    if let Err(err) = update_link
+) -> ApiResponse<UpdateLinkResponse, ResponseError> {
+    update_link
         .validate()
-        .map_err(ApiError::BadClientData)
-    {
-        return err.into_api_response();
-    };
+        .map_err(ApiError::BadClientData)?;
 
-    let link = match Link::find_by_id(link_id)
+    let link = Link::find_by_id(link_id)
         .filter(url::Column::DeletedAt.is_null())
         .one(&db)
         .await
-        .map_err(|_| ApiError::DBInternalError)
-    {
-        Ok(v) => v,
-        Err(err) => return err.into_api_response(),
-    };
+        .map_err(|_| ApiError::DBInternalError)?;
 
-    let link: url::Model = match link.ok_or(ApiError::LinkNotFound) {
-        Ok(v) => v,
-        Err(err) => return err.into_api_response(),
-    };
+    let link: url::Model = link.ok_or(ApiError::LinkNotFound)?;
 
     if link.owner_id != user_id {
-        return ApiError::ForbiddenUpdate.into_api_response();
+        return Err(ApiError::ForbiddenUpdate.into());
     };
 
     let mut link: url::ActiveModel = link.into();
@@ -108,19 +90,14 @@ pub async fn update_url_handler(
 
     link.updated_at = Set(Some(Utc::now().naive_utc()));
 
-    let updated_link = match link
+    let updated_link = link
         .update(&db)
         .await
-        .map_err(|_| ApiError::DBInternalError)
-    {
-        Ok(v) => v,
-        Err(err) => return err.into_api_response(),
+        .map_err(|_| ApiError::DBInternalError)?;
+
+    let data = UpdateLinkResponse {
+        link: updated_link.into(),
     };
 
-    ApiResponse::Data {
-        data: UpdateLinkResponse {
-            link: updated_link.into(),
-        },
-        status: StatusCode::OK,
-    }
+    Ok(ApiResponseData::success_with_data(data, StatusCode::OK))
 }

@@ -1,16 +1,15 @@
-use axum::{extract::State, Json};
-use hyper::StatusCode;
+use axum::{extract::State, http::StatusCode, Json};
 use sea_orm::{prelude::Uuid, ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, Set};
 use sea_orm::{Condition, QueryFilter};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
 
-use crate::handler::helpers::ResponseError;
+use crate::handler::helpers::{ResponseError, ApiResponseData};
 use crate::{
     dto::url::Url,
     entity::url,
     handler::{
-        helpers::{ApiResponse, ApiResponseError, ErrorToResponse},
+        helpers::ApiResponse,
         utils::UserId,
     },
 };
@@ -36,23 +35,12 @@ pub enum ApiError {
     LinkExist,
 }
 
-impl ErrorToResponse for ApiError {
-    fn into_api_response<T: Serialize>(self) -> ApiResponse<T> {
-        match self {
-            ApiError::BadClientData(err) => ApiResponse::Error {
-                error: ApiResponseError::complicated_error(
-                    "invalid data from client",
-                    ResponseError::from(err),
-                ),
-                status: StatusCode::BAD_REQUEST,
-            },
-            ApiError::DBInternalError => ApiResponse::StatusCode(StatusCode::INTERNAL_SERVER_ERROR),
-            ApiError::LinkExist => ApiResponse::Error {
-                error: ApiResponseError::simple_error(
-                    "link with the name or slug provided already exists",
-                ),
-                status: StatusCode::BAD_REQUEST,
-            },
+impl From<ApiError> for ApiResponseData<ResponseError> {
+    fn from(value: ApiError) -> Self {
+        match value {
+            ApiError::BadClientData(err) => ApiResponseData::error(Some(ResponseError::from(err)), "invalid data from client", StatusCode::BAD_REQUEST),
+            ApiError::DBInternalError => ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR),
+            ApiError::LinkExist => ApiResponseData::error(None, "link with the name or slug provided already exists", StatusCode::BAD_REQUEST),
         }
     }
 }
@@ -62,10 +50,9 @@ pub async fn create_url_handler(
     UserId(user_id): UserId,
     State(db): State<DatabaseConnection>,
     Json(create_link): Json<CreateLinkInput>,
-) -> ApiResponse<CreateLinkResponse> {
-    if let Err(error) = create_link.validate().map_err(ApiError::BadClientData) {
-        return error.into_api_response();
-    };
+) -> ApiResponse<CreateLinkResponse, impl Serialize> {
+    create_link.validate().map_err(ApiError::BadClientData)?;
+
     // Check if the user has a link with the same name or slug
     let conditions = Condition::any()
         .add(url::Column::Name.eq(create_link.name.clone()))
@@ -79,10 +66,10 @@ pub async fn create_url_handler(
     {
         Ok(link) => {
             if link.is_some() {
-                return ApiError::LinkExist.into_api_response();
+                return Err(ApiError::LinkExist.into());
             }
         }
-        Err(err) => return err.into_api_response(),
+        Err(err) => return Err(err.into()),
     };
 
     let now = chrono::Utc::now();
@@ -95,17 +82,14 @@ pub async fn create_url_handler(
         created_at: Set(now.naive_utc()),
         ..Default::default()
     };
-    let link: url::Model = match link
+    let link: url::Model = link
         .insert(&db)
         .await
-        .map_err(|_| ApiError::DBInternalError)
-    {
-        Ok(v) => v,
-        Err(err) => return err.into_api_response(),
+        .map_err(|_| ApiError::DBInternalError)?;
+
+    let data = CreateLinkResponse {
+        link: link.into(),
     };
 
-    ApiResponse::Data {
-        data: CreateLinkResponse { link: link.into() },
-        status: StatusCode::OK,
-    }
+    Ok(ApiResponseData::success_with_data(data, StatusCode::OK))
 }

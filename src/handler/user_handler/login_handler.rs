@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::entity::sea_orm_active_enums::Provider;
 use crate::entity::user;
-use crate::handler::helpers::{ApiResponse, ApiResponseError, ErrorToResponse};
+use crate::handler::helpers::{ApiResponse, ApiResponseData};
 use crate::handler::utils::{encode_jwt, verify_password};
 use crate::router::Secrets;
 
@@ -30,21 +30,22 @@ pub enum ApiError {
     JWTEncodingError,
 }
 
-impl ErrorToResponse for ApiError {
-    fn into_api_response<T: serde::Serialize>(self) -> ApiResponse<T> {
-        match self {
-            ApiError::UserNotFound => ApiResponse::Error {
-                error: ApiResponseError::simple_error("user not found"),
-                status: StatusCode::NOT_ACCEPTABLE,
-            },
-            ApiError::BadCredentials => ApiResponse::StatusCode(StatusCode::FORBIDDEN),
-            ApiError::InternalError | ApiError::JWTEncodingError => {
-                ApiResponse::StatusCode(StatusCode::INTERNAL_SERVER_ERROR)
+impl<E> From<ApiError> for ApiResponseData<E>
+where
+    E: Serialize + 'static,
+{
+    fn from(value: ApiError) -> Self {
+        match value {
+            ApiError::UserNotFound => {
+                ApiResponseData::error(None, "user not found", StatusCode::NOT_ACCEPTABLE)
             }
-            ApiError::UserProviderNotValid => ApiResponse::Error {
-                error: ApiResponseError::simple_error("bad provider"),
-                status: StatusCode::BAD_REQUEST,
-            },
+            ApiError::BadCredentials => ApiResponseData::status_code(StatusCode::FORBIDDEN),
+            ApiError::UserProviderNotValid => {
+                ApiResponseData::error(None, "bad provider", StatusCode::BAD_REQUEST)
+            }
+            ApiError::InternalError | ApiError::JWTEncodingError => {
+                ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR)
+            }
         }
     }
 }
@@ -54,57 +55,38 @@ pub async fn login_handler(
     State(secrets): State<Secrets>,
     State(db_connection): State<DatabaseConnection>,
     Json(user_input): Json<LoginUserInput>,
-) -> ApiResponse<LoginResponseObject> {
-    let res = match user::Entity::find()
+) -> ApiResponse<LoginResponseObject, ()> {
+    let user = user::Entity::find()
         .filter(user::Column::Username.eq(user_input.username))
         .one(&db_connection)
         .await
-        .map_err(|_| ApiError::UserNotFound)
-    {
-        Ok(value) => value,
-        Err(err) => return err.into_api_response(),
-    };
+        .map_err(|_| ApiError::UserNotFound)?;
 
-    let user = match res {
-        Some(value) => value,
-        None => return ApiError::UserNotFound.into_api_response(),
-    };
+    let user = user.ok_or(ApiError::UserNotFound)?;
 
     let password = match user.provider {
-        Provider::Google => return ApiError::UserProviderNotValid.into_api_response(),
+        Provider::Google => return Err(ApiError::UserProviderNotValid.into()),
         Provider::Local => user.password_hash,
     };
 
-    let hashed_password = match password.ok_or(ApiError::InternalError) {
-        Ok(value) => value,
-        Err(err) => return err.into_api_response(),
-    };
+    let hashed_password = password.ok_or(ApiError::InternalError)?;
 
-    let is_match = match verify_password(
+    let is_match = verify_password(
         secrets.hash_secret.as_bytes(),
         user_input.password.as_bytes(),
         &hashed_password,
     )
-    .map_err(|_| ApiError::InternalError)
-    {
-        Ok(value) => value,
-        Err(err) => return err.into_api_response(),
-    };
+    .map_err(|_| ApiError::InternalError)?;
 
     if !is_match {
-        return ApiError::BadCredentials.into_api_response();
+        return Err(ApiError::BadCredentials.into());
     };
 
     // Creating the jwt token
-    let token = match encode_jwt(secrets.jwt_secret.as_bytes(), &user.id)
-        .map_err(|_| ApiError::JWTEncodingError)
-    {
-        Ok(value) => value,
-        Err(err) => return err.into_api_response(),
-    };
+    let token = encode_jwt(secrets.jwt_secret.as_bytes(), &user.id)
+        .map_err(|_| ApiError::JWTEncodingError)?;
 
-    ApiResponse::Data {
-        data: LoginResponseObject { token },
-        status: StatusCode::OK,
-    }
+    let data = LoginResponseObject { token };
+
+    Ok(ApiResponseData::success_with_data(data, StatusCode::OK))
 }
