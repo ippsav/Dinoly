@@ -16,8 +16,7 @@ impl Default for ApiResponseType {
     }
 }
 
-
-pub enum ApiResponseData<T:Serialize> {
+pub enum ApiResponseData<T: Serialize> {
     Data {
         data: T,
         status: StatusCode,
@@ -29,26 +28,23 @@ pub enum ApiResponseData<T:Serialize> {
     StatusCode(StatusCode),
 }
 
-impl<T> ApiResponseData<T> 
+impl<T> ApiResponseData<T>
 where
-    T:Serialize + 'static
+    T: Serialize + 'static,
 {
-    pub fn success_with_data(data: T, status:StatusCode) -> Self {
-        Self::Data {
-            data,
-            status,
-        }
+    pub fn success_with_data(data: T, status: StatusCode) -> Self {
+        Self::Data { data, status }
     }
 
-    pub fn status_code(status:StatusCode) -> Self {
+    pub fn status_code(status: StatusCode) -> Self {
         Self::StatusCode(status)
     }
 
-    pub fn error(error: Option<T>, message:&'static str, status:StatusCode) -> Self {
+    pub fn error(error: Option<T>, message: &'static str, status: StatusCode) -> Self {
         match error {
             Some(err) => Self::Error {
-                    error: ApiResponseError::complicated_error(message, err),
-                    status,
+                error: ApiResponseError::complicated_error(message, err),
+                status,
             },
             None => Self::Error {
                 error: ApiResponseError::simple_error(message),
@@ -60,28 +56,26 @@ where
 
 impl<T> IntoResponse for ApiResponseData<T>
 where
-    T:Serialize,
+    T: Serialize,
 {
     fn into_response(self) -> axum::response::Response {
         match self {
             ApiResponseData::Data { data, status } => (
                 status,
-                Json(
-                    ApiResponseObject::<T> {
-                        data: Some(data),
-                        error: None,
-                    }
-                )
-            ).into_response(),
+                Json(ApiResponseObject::<T> {
+                    data: Some(data),
+                    error: None,
+                }),
+            )
+                .into_response(),
             ApiResponseData::Error { error, status } => (
                 status,
-                Json(
-                    ApiResponseObject::<T> {
-                        data: None,
-                        error: Some(error.into())
-                    }
-                )
-            ).into_response(),
+                Json(ApiResponseObject::<T> {
+                    data: None,
+                    error: Some(error.into()),
+                }),
+            )
+                .into_response(),
             ApiResponseData::StatusCode(status) => status.into_response(),
         }
     }
@@ -97,5 +91,4 @@ where
     error: Option<ApiResponseErrorObject>,
 }
 
-pub type ApiResponse<T, E> = Result<ApiResponseData<T>,ApiResponseData<E>>;
-
+pub type ApiResponse<T, E> = Result<ApiResponseData<T>, ApiResponseData<E>>;

@@ -11,7 +11,7 @@ use validator::{Validate, ValidationErrors};
 
 use crate::entity::sea_orm_active_enums::Provider;
 use crate::entity::user;
-use crate::handler::helpers::{ApiResponse, ResponseError, ApiResponseData};
+use crate::handler::helpers::{ApiResponse, ApiResponseData, ResponseError};
 use crate::handler::utils::{encode_jwt, hash_password};
 use crate::router::Secrets;
 
@@ -42,14 +42,20 @@ pub enum ApiError {
     JWTEncodingError,
 }
 
-
-impl From<ApiError> for ApiResponseData<ResponseError>
-{
+impl From<ApiError> for ApiResponseData<ResponseError> {
     fn from(value: ApiError) -> Self {
         match value {
-            ApiError::BadClientData(err) => ApiResponseData::error(Some(ResponseError::from(err)), "invalid data from client", StatusCode::BAD_REQUEST),
-            ApiError::UserAlreadyRegistered => ApiResponseData::error(None, "user already registered", StatusCode::FORBIDDEN),
-            ApiError::DbInternalError | ApiError::HashingError | ApiError::JWTEncodingError => ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR),
+            ApiError::BadClientData(err) => ApiResponseData::error(
+                Some(ResponseError::from(err)),
+                "invalid data from client",
+                StatusCode::BAD_REQUEST,
+            ),
+            ApiError::UserAlreadyRegistered => {
+                ApiResponseData::error(None, "user already registered", StatusCode::FORBIDDEN)
+            }
+            ApiError::DbInternalError | ApiError::HashingError | ApiError::JWTEncodingError => {
+                ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR)
+            }
         }
     }
 }
@@ -58,17 +64,17 @@ impl From<ApiError> for ApiResponseData<ResponseError>
 pub async fn register_handler(
     State(db_connection): State<DatabaseConnection>,
     State(secrets): State<Secrets>,
-    Json(created_user): Json<RegisterUserInput>,
+    Json(create_user): Json<RegisterUserInput>,
 ) -> ApiResponse<RegisterResponseObject, ResponseError> {
     // Validating user input
-    created_user.validate().map_err(ApiError::BadClientData)?; 
+    create_user.validate().map_err(ApiError::BadClientData)?;
 
     // Check if user is already registered
     match user::Entity::find()
         .filter(
             Condition::any()
-                .add(user::Column::Username.eq(created_user.username.clone()))
-                .add(user::Column::Email.eq(created_user.email.clone())),
+                .add(user::Column::Username.eq(create_user.username.clone()))
+                .add(user::Column::Email.eq(create_user.email.clone())),
         )
         .one(&db_connection)
         .await
@@ -87,7 +93,7 @@ pub async fn register_handler(
 
     let hashed_password = hash_password(
         secrets.hash_secret.as_bytes(),
-        created_user.password.as_bytes(),
+        create_user.password.as_bytes(),
     )
     .map_err(|_| ApiError::HashingError)?;
 
@@ -95,8 +101,8 @@ pub async fn register_handler(
     let now = chrono::Utc::now();
     let user = user::ActiveModel {
         id: Set(Uuid::new_v4()),
-        username: Set(created_user.username),
-        email: Set(created_user.email),
+        username: Set(create_user.username),
+        email: Set(create_user.email),
         password_hash: Set(Some(hashed_password)),
         provider: Set(Provider::Local),
         created_at: Set(now.naive_utc()),

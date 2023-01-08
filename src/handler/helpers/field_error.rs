@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use serde::Serialize;
 use validator::ValidationErrors;
 
-// TODO: extracting it
 #[derive(Debug, Serialize)]
 pub struct ResponseError {
     pub fields: Option<HashMap<String, String>>,

@@ -31,15 +31,21 @@ pub enum ApiError {
 }
 
 impl<E> From<ApiError> for ApiResponseData<E>
-    where
-        E: Serialize + 'static,
+where
+    E: Serialize + 'static,
 {
     fn from(value: ApiError) -> Self {
         match value {
-            ApiError::UserNotFound => ApiResponseData::error(None, "user not found", StatusCode::NOT_ACCEPTABLE),
+            ApiError::UserNotFound => {
+                ApiResponseData::error(None, "user not found", StatusCode::NOT_ACCEPTABLE)
+            }
             ApiError::BadCredentials => ApiResponseData::status_code(StatusCode::FORBIDDEN),
-            ApiError::UserProviderNotValid => ApiResponseData::error(None, "bad provider", StatusCode::BAD_REQUEST),
-            ApiError::InternalError | ApiError::JWTEncodingError => ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR),
+            ApiError::UserProviderNotValid => {
+                ApiResponseData::error(None, "bad provider", StatusCode::BAD_REQUEST)
+            }
+            ApiError::InternalError | ApiError::JWTEncodingError => {
+                ApiResponseData::status_code(StatusCode::INTERNAL_SERVER_ERROR)
+            }
         }
     }
 }
